@@ -1,11 +1,20 @@
 # -*- coding: utf-8 -*-
 # ==========================================================================
-# STEP 2 |  commit: test: add requirement-based tests as a safety net
-# WHAT : NO production code change. Replaces the kata's failing placeholder test with real, requirement-based tests.
-# WHY  : You cannot safely refactor legacy code without tests. They run after EVERY later commit.
-# NOTE : See test_gilded_rose.py (rule tests, 30-day trajectories, texttest_fixture run).
+# STEP 3 commit: refactor: replace magic strings and numbers with constants
+# WHAT : Replace magic strings and numbers with named constants.
+# WHY  : No logic changes, only names. Removes typo risk and makes rules readable.
+# NOTE : Still nested and still full of `!=` conditions.
 # TEST : python -m unittest -v   (run inside this folder)
 # ==========================================================================
+
+# NEW: constants replace the magic strings that were repeated through the code.
+AGED_BRIE = "Aged Brie"
+BACKSTAGE_PASSES = "Backstage passes to a TAFKAL80ETC concert"
+SULFURAS = "Sulfuras, Hand of Ragnaros"
+# NEW: named limits instead of bare 0 and 50.
+MIN_QUALITY = 0
+MAX_QUALITY = 50
+
 
 class GildedRose(object):
 
@@ -14,32 +23,33 @@ class GildedRose(object):
 
     def update_quality(self):
         for item in self.items:
-            if item.name != "Aged Brie" and item.name != "Backstage passes to a TAFKAL80ETC concert":
-                if item.quality > 0:
-                    if item.name != "Sulfuras, Hand of Ragnaros":
+            # Logic is UNCHANGED: only the literals were replaced with constants.
+            if item.name != AGED_BRIE and item.name != BACKSTAGE_PASSES:
+                if item.quality > MIN_QUALITY:
+                    if item.name != SULFURAS:
                         item.quality = item.quality - 1
             else:
-                if item.quality < 50:
+                if item.quality < MAX_QUALITY:
                     item.quality = item.quality + 1
-                    if item.name == "Backstage passes to a TAFKAL80ETC concert":
+                    if item.name == BACKSTAGE_PASSES:
                         if item.sell_in < 11:
-                            if item.quality < 50:
+                            if item.quality < MAX_QUALITY:
                                 item.quality = item.quality + 1
                         if item.sell_in < 6:
-                            if item.quality < 50:
+                            if item.quality < MAX_QUALITY:
                                 item.quality = item.quality + 1
-            if item.name != "Sulfuras, Hand of Ragnaros":
+            if item.name != SULFURAS:
                 item.sell_in = item.sell_in - 1
             if item.sell_in < 0:
-                if item.name != "Aged Brie":
-                    if item.name != "Backstage passes to a TAFKAL80ETC concert":
-                        if item.quality > 0:
-                            if item.name != "Sulfuras, Hand of Ragnaros":
+                if item.name != AGED_BRIE:
+                    if item.name != BACKSTAGE_PASSES:
+                        if item.quality > MIN_QUALITY:
+                            if item.name != SULFURAS:
                                 item.quality = item.quality - 1
                     else:
                         item.quality = item.quality - item.quality
                 else:
-                    if item.quality < 50:
+                    if item.quality < MAX_QUALITY:
                         item.quality = item.quality + 1
 
 

@@ -4,7 +4,8 @@
 #
 """Tests for the Gilded Rose kata, written from GildedRoseRequirements.md.
 
-Each test names the requirement it protects, so a you can map spec -> test.
+Each test names the requirement it protects, so a reviewer can map spec -> test.
+They describe EXISTING behaviour first, so they are the safety net for the refactoring commits.
 """
 import contextlib
 import io
