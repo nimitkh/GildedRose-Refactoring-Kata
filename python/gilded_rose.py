@@ -1,19 +1,30 @@
 # -*- coding: utf-8 -*-
 # ==========================================================================
-# STEP 3 commit: refactor: replace magic strings and numbers with constants
-# WHAT : Replace magic strings and numbers with named constants.
-# WHY  : No logic changes, only names. Removes typo risk and makes rules readable.
-# NOTE : Still nested and still full of `!=` conditions.
+# STEP 4 |  commit: refactor: extract increase/decrease quality helpers
+# WHAT : Extract increase_quality() / decrease_quality() helpers.
+# WHY  : The repeated `if quality < 50: quality += 1` blocks now live in one place each.
+# NOTE : Still has negated conditions (`!=`): removed in steps 5 and 6.
 # TEST : python -m unittest -v   (run inside this folder)
 # ==========================================================================
 
-# NEW: constants replace the magic strings that were repeated through the code.
 AGED_BRIE = "Aged Brie"
 BACKSTAGE_PASSES = "Backstage passes to a TAFKAL80ETC concert"
 SULFURAS = "Sulfuras, Hand of Ragnaros"
-# NEW: named limits instead of bare 0 and 50.
 MIN_QUALITY = 0
 MAX_QUALITY = 50
+
+
+# NEW helper: replaces every repeated `if quality < 50: quality += 1` block.
+# The upper-bound check now lives in ONE place.
+def increase_quality(item, amount=1):
+    if item.quality < MAX_QUALITY:
+        item.quality = min(MAX_QUALITY, item.quality + amount)
+
+
+# NEW helper: same idea for `quality > 0` / `quality - 1`.
+def decrease_quality(item, amount=1):
+    if item.quality > MIN_QUALITY:
+        item.quality = max(MIN_QUALITY, item.quality - amount)
 
 
 class GildedRose(object):
@@ -23,34 +34,29 @@ class GildedRose(object):
 
     def update_quality(self):
         for item in self.items:
-            # Logic is UNCHANGED: only the literals were replaced with constants.
+            # The nested bounds checks (quality > 0, quality < 50) are gone: the helpers handle them.
+            # Still negated (`!=`) conditions here: removed in steps 5 and 6.
             if item.name != AGED_BRIE and item.name != BACKSTAGE_PASSES:
-                if item.quality > MIN_QUALITY:
-                    if item.name != SULFURAS:
-                        item.quality = item.quality - 1
+                if item.name != SULFURAS:
+                    decrease_quality(item)
             else:
-                if item.quality < MAX_QUALITY:
-                    item.quality = item.quality + 1
-                    if item.name == BACKSTAGE_PASSES:
-                        if item.sell_in < 11:
-                            if item.quality < MAX_QUALITY:
-                                item.quality = item.quality + 1
-                        if item.sell_in < 6:
-                            if item.quality < MAX_QUALITY:
-                                item.quality = item.quality + 1
+                increase_quality(item)
+                if item.name == BACKSTAGE_PASSES:
+                    if item.sell_in < 11:
+                        increase_quality(item)
+                    if item.sell_in < 6:
+                        increase_quality(item)
             if item.name != SULFURAS:
                 item.sell_in = item.sell_in - 1
             if item.sell_in < 0:
                 if item.name != AGED_BRIE:
                     if item.name != BACKSTAGE_PASSES:
-                        if item.quality > MIN_QUALITY:
-                            if item.name != SULFURAS:
-                                item.quality = item.quality - 1
+                        if item.name != SULFURAS:
+                            decrease_quality(item)
                     else:
-                        item.quality = item.quality - item.quality
+                        item.quality = MIN_QUALITY
                 else:
-                    if item.quality < MAX_QUALITY:
-                        item.quality = item.quality + 1
+                    increase_quality(item)
 
 
 class Item:
