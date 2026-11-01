@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+# ==========================================================================
+# STEP 1 |  commit: original kata code
+# WHAT : Start from the untouched kata code.
+# WHY  : A clean baseline. Nothing is changed, you can diff everything that follows.
+# NOTE : Hard to read: deeply nested if/else, repeated magic strings and numbers, many `!=` conditions.
+# TEST : python -m unittest -v   (run inside this folder)
+# ==========================================================================
 
 class GildedRose(object):
 

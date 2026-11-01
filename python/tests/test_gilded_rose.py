@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# The kata's starting test (a failing placeholder). Replaced by real tests in step 2.
 import unittest
 
 from gilded_rose import Item, GildedRose
@@ -11,6 +12,6 @@ class GildedRoseTest(unittest.TestCase):
         gilded_rose.update_quality()
         self.assertEqual("fixme", items[0].name)
 
-        
+
 if __name__ == '__main__':
     unittest.main()

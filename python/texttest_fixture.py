@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# UNCHANGED kata fixture. Run:  python texttest_fixture.py 30   (prints days 0..30)
 from __future__ import print_function
 
 from gilded_rose import *
