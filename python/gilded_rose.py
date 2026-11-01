@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 # ==========================================================================
-# STEP 1 |  commit: original kata code
-# WHAT : Start from the untouched kata code.
-# WHY  : A clean baseline. Nothing is changed, you can diff everything that follows.
-# NOTE : Hard to read: deeply nested if/else, repeated magic strings and numbers, many `!=` conditions.
+# STEP 2 |  commit: test: add requirement-based tests as a safety net
+# WHAT : NO production code change. Replaces the kata's failing placeholder test with real, requirement-based tests.
+# WHY  : You cannot safely refactor legacy code without tests. They run after EVERY later commit.
+# NOTE : See test_gilded_rose.py (rule tests, 30-day trajectories, texttest_fixture run).
 # TEST : python -m unittest -v   (run inside this folder)
 # ==========================================================================
 
