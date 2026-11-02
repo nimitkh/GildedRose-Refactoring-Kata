@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 # ==========================================================================
-# STEP 6 |  commit: refactor: one function per item type, if/elif instead of negated conditions
-# WHAT : One function per item type, chosen by a positive if/elif/else.
-# WHY  : Each rule is readable on its own and the double negatives disappear.
-# NOTE : Adding a new item type still means editing the if/elif chain: fixed in step 8.
+# STEP 7 |  commit: refactor: separate sell_in and quality updates, add is_expired and named thresholds
+# WHAT : Separate aging (sell_in) from quality rules; add is_expired() and named backstage thresholds.
+# WHY  : Single responsibility per function. Aging now happens first, so thresholds are `< 10` / `< 5` (original `< 11` / `< 6` evaluated before aging).
+# NOTE : The off-by-one shift in the backstage thresholds is the subtlest point.
 # TEST : python -m unittest -v   (run inside this folder)
 # ==========================================================================
 
@@ -12,6 +12,14 @@ BACKSTAGE_PASSES = "Backstage passes to a TAFKAL80ETC concert"
 SULFURAS = "Sulfuras, Hand of Ragnaros"
 MIN_QUALITY = 0
 MAX_QUALITY = 50
+
+# Backstage passes gain extra quality once sell_in drops BELOW these values.
+# (sell_in is already aged for today when these are checked.)
+# NEW: named thresholds (were bare 11 and 6).
+# They are 10 / 5 here because sell_in is aged BEFORE quality is calculated:
+# original `sell_in < 11` evaluated before aging == `sell_in < 10` after aging.
+BACKSTAGE_DOUBLE_INCREASE_BELOW = 10
+BACKSTAGE_TRIPLE_INCREASE_BELOW = 5
 
 
 def increase_quality(item, amount=1):
@@ -24,46 +32,54 @@ def decrease_quality(item, amount=1):
         item.quality = max(MIN_QUALITY, item.quality - amount)
 
 
-# NEW: each item type gets its own function holding only ITS rules.
-def update_normal_item(item):
-    decrease_quality(item)
+# NEW: gives a name to the repeated condition `item.sell_in < 0`.
+def is_expired(item):
+    return item.sell_in < 0
+
+
+# NEW: aging is separated from quality rules (single responsibility).
+def update_sell_in(item):
     item.sell_in = item.sell_in - 1
-    if item.sell_in < 0:
+
+
+def update_normal_quality(item):
+    decrease_quality(item)
+    if is_expired(item):
         decrease_quality(item)
 
 
-# Aged Brie: quality goes UP (twice as fast once expired).
-def update_aged_brie(item):
+def update_aged_brie_quality(item):
     increase_quality(item)
-    item.sell_in = item.sell_in - 1
-    if item.sell_in < 0:
+    if is_expired(item):
         increase_quality(item)
 
 
-# Backstage passes: +1, +2 (11 days or fewer), +3 (6 days or fewer), 0 after the concert.
-def update_backstage_passes(item):
+def update_backstage_passes_quality(item):
     increase_quality(item)
-    if item.sell_in < 11:
+    if item.sell_in < BACKSTAGE_DOUBLE_INCREASE_BELOW:
         increase_quality(item)
-    if item.sell_in < 6:
+    if item.sell_in < BACKSTAGE_TRIPLE_INCREASE_BELOW:
         increase_quality(item)
-    item.sell_in = item.sell_in - 1
-    if item.sell_in < 0:
+    if is_expired(item):
         item.quality = MIN_QUALITY
 
 
-# CHANGED: positive if/elif/else dispatch replaces `!= A and != B` double negatives.
-# Weakness: adding a new item type still means editing this chain (fixed in step 8).
+# NEW: dispatch for the quality rules only.
+def update_item_quality(item):
+    if item.name == AGED_BRIE:
+        update_aged_brie_quality(item)
+    elif item.name == BACKSTAGE_PASSES:
+        update_backstage_passes_quality(item)
+    else:
+        update_normal_quality(item)
+
+
+# CHANGED: order is now age first, then quality (rules use the already-aged sell_in).
 def update_item(item):
-    # Positive if/elif chain instead of negated "!= A and != B" conditions.
     if item.name == SULFURAS:
         return
-    elif item.name == AGED_BRIE:
-        update_aged_brie(item)
-    elif item.name == BACKSTAGE_PASSES:
-        update_backstage_passes(item)
-    else:
-        update_normal_item(item)
+    update_sell_in(item)       # age first ...
+    update_item_quality(item)  # ... quality rules use the already-aged sell_in
 
 
 class GildedRose(object):
