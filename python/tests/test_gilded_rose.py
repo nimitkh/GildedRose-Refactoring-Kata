@@ -13,8 +13,8 @@ import unittest
 from unittest import mock
 
 import texttest_fixture
-from gilded_rose import (AgedBrieUpdater, BackstagePassUpdater, DEFAULT_UPDATER, GildedRose, Item,
-                         SulfurasUpdater, get_updater)
+from gilded_rose import (AgedBrieUpdater, BackstagePassUpdater, ConjuredItemUpdater, DEFAULT_UPDATER,
+                         GildedRose, Item, SulfurasUpdater, get_updater)
 
 AGED_BRIE = "Aged Brie"
 BACKSTAGE_PASSES = "Backstage passes to a TAFKAL80ETC concert"
@@ -188,6 +188,52 @@ class GetUpdaterTest(unittest.TestCase):
 
     def test_unknown_item_gets_the_default_updater(self):
         self.assertIs(DEFAULT_UPDATER, get_updater(Item("foo", 1, 1)))
+
+
+class ConjuredTest(unittest.TestCase):
+    """New requirement: "Conjured" items degrade in Quality twice as fast as normal items."""
+
+    NAME = "Conjured Mana Cake"
+
+    def test_degrades_twice_as_fast_as_a_normal_item(self):
+        self.assertEqual(8, update(self.NAME, 5, 10).quality)
+
+    def test_degrades_by_four_once_the_sell_by_date_has_passed(self):
+        self.assertEqual(6, update(self.NAME, 0, 10).quality)
+        self.assertEqual(6, update(self.NAME, -2, 10).quality)
+
+    def test_quality_is_never_negative(self):
+        self.assertEqual(0, update(self.NAME, 5, 1).quality)
+        self.assertEqual(0, update(self.NAME, -1, 3).quality)
+
+    def test_sell_in_is_lowered_every_day(self):
+        self.assertEqual(4, update(self.NAME, 5, 10).sell_in)
+
+    def test_any_item_whose_name_starts_with_conjured_is_conjured(self):
+        # ASSUMPTION (see README): the spec only gives one sample name, so we match the prefix.
+        self.assertEqual(8, update("Conjured Sword", 5, 10).quality)
+        self.assertIsInstance(get_updater(Item("Conjured Sword", 1, 1)), ConjuredItemUpdater)
+
+    def test_name_must_start_with_conjured(self):
+        self.assertEqual(9, update("Mana Cake, Conjured", 5, 10).quality)
+
+    def test_30_day_trajectory_of_the_sample_cake(self):
+        item = Item(self.NAME, 3, 6)
+        shop = GildedRose([item])
+        for day, expected_quality in enumerate([6, 4, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]):
+            with self.subTest(day=day):
+                self.assertEqual(expected_quality, item.quality)
+                self.assertEqual(3 - day, item.sell_in)
+            shop.update_quality()
+
+
+class ConjuredTextFixtureTest(unittest.TestCase):
+    def test_sample_cake_in_the_30_day_report(self):
+        out = io.StringIO()
+        with mock.patch("sys.argv", ["texttest_fixture.py", "30"]), contextlib.redirect_stdout(out):
+            texttest_fixture.main()
+        last_day = out.getvalue().split("-------- day 30 --------")[1]
+        self.assertIn("Conjured Mana Cake, -27, 0", last_day)
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 # ==========================================================================
-# STEP 8 |  commit: refactor: strategy classes per item type with a registry
-# WHAT : Strategy pattern: one ItemUpdater class per item type + a registry dict.
-# WHY  : GildedRose.update_quality() shrinks to a 3-line loop. New types never touch existing logic (open/closed principle).
-# NOTE : inheritance for reuse vs a Protocol with composition.
+# STEP 9 |  commit: feat: add Conjured items (degrade twice as fast)
+# WHAT : Add the Conjured feature (degrades twice as fast).
+# WHY  : Because the design is extendable, the feature is a tiny class plus a prefix check, with its own tests.
+# NOTE : ASSUMPTION: any name starting with 'Conjured' counts; degrades 2/day and 4/day once expired.
 # TEST : python -m unittest -v   (run inside this folder)
 # ==========================================================================
 
 AGED_BRIE = "Aged Brie"
 BACKSTAGE_PASSES = "Backstage passes to a TAFKAL80ETC concert"
 SULFURAS = "Sulfuras, Hand of Ragnaros"
+# NEW: any item whose name starts with this is treated as Conjured.
+CONJURED_PREFIX = "Conjured"
 MIN_QUALITY = 0
 MAX_QUALITY = 50
 
@@ -33,10 +35,11 @@ def is_expired(item):
     return item.sell_in < 0
 
 
-# NEW (Strategy pattern): each item type becomes a class.
-# ItemUpdater is the default (normal item); subclasses override only what differs.
 class ItemUpdater:
     """Default behaviour: a normal item."""
+
+    # NEW: quality lost per day by a normal item. Subclasses change it (Conjured = 2).
+    degrade_rate = 1
 
     def update(self, item):
         self.update_sell_in(item)       # age first ...
@@ -46,9 +49,9 @@ class ItemUpdater:
         item.sell_in = item.sell_in - 1
 
     def update_quality(self, item):
-        decrease_quality(item)
+        decrease_quality(item, self.degrade_rate)
         if is_expired(item):
-            decrease_quality(item)
+            decrease_quality(item, self.degrade_rate)
 
 
 class AgedBrieUpdater(ItemUpdater):
@@ -69,7 +72,6 @@ class BackstagePassUpdater(ItemUpdater):
             item.quality = MIN_QUALITY
 
 
-# Sulfuras overrides both methods with no-ops: it never ages and never changes.
 class SulfurasUpdater(ItemUpdater):
     def update_sell_in(self, item):
         pass
@@ -78,10 +80,16 @@ class SulfurasUpdater(ItemUpdater):
         pass
 
 
-# One shared, stateless default instance (no new object per item).
-DEFAULT_UPDATER = ItemUpdater()
+# NEW FEATURE: only a few lines because the design is extendable.
+class ConjuredItemUpdater(ItemUpdater):
+    """Conjured items degrade twice as fast as normal items."""
 
-# NEW registry: item name -> updater. A new item type is ONE new line here (plus its class).
+    degrade_rate = 2
+
+
+DEFAULT_UPDATER = ItemUpdater()
+CONJURED_UPDATER = ConjuredItemUpdater()
+
 ITEM_UPDATERS = {
     AGED_BRIE: AgedBrieUpdater(),
     BACKSTAGE_PASSES: BackstagePassUpdater(),
@@ -89,12 +97,15 @@ ITEM_UPDATERS = {
 }
 
 
-# NEW lookup: replaces the if/elif dispatch chain.
+# CHANGED: exact-name lookup first, then Conjured prefix, then default.
 def get_updater(item):
-    return ITEM_UPDATERS.get(item.name, DEFAULT_UPDATER)
+    if item.name in ITEM_UPDATERS:
+        return ITEM_UPDATERS[item.name]
+    if item.name.startswith(CONJURED_PREFIX):
+        return CONJURED_UPDATER
+    return DEFAULT_UPDATER
 
 
-# update_quality is now just a loop that delegates to the right updater.
 class GildedRose(object):
 
     def __init__(self, items):
