@@ -13,7 +13,8 @@ import unittest
 from unittest import mock
 
 import texttest_fixture
-from gilded_rose import GildedRose, Item
+from gilded_rose import (AgedBrieUpdater, BackstagePassUpdater, DEFAULT_UPDATER, GildedRose, Item,
+                         SulfurasUpdater, get_updater)
 
 AGED_BRIE = "Aged Brie"
 BACKSTAGE_PASSES = "Backstage passes to a TAFKAL80ETC concert"
@@ -175,6 +176,18 @@ class TextFixtureTest(unittest.TestCase):
         "Sulfuras, Hand of Ragnaros, -1, 80",
         ]:
             self.assertIn(row, last_day)
+
+
+class GetUpdaterTest(unittest.TestCase):
+    """The registry picks the right strategy for each item name."""
+
+    def test_selects_updater_by_name(self):
+        cases = {AGED_BRIE: AgedBrieUpdater, BACKSTAGE_PASSES: BackstagePassUpdater, SULFURAS: SulfurasUpdater}
+        for name, expected in cases.items():
+            self.assertIsInstance(get_updater(Item(name, 1, 1)), expected)
+
+    def test_unknown_item_gets_the_default_updater(self):
+        self.assertIs(DEFAULT_UPDATER, get_updater(Item("foo", 1, 1)))
 
 if __name__ == "__main__":
     unittest.main()
