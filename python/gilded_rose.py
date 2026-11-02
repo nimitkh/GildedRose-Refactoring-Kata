@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 # ==========================================================================
-# STEP 5 |  commit: refactor: extract update_item and add guard clause for Sulfuras
-# WHAT : Extract update_item() and add a guard clause for Sulfuras.
-# WHY  : Sulfuras never changes, so returning early deletes every `!= SULFURAS` check.
-# NOTE : Still has `!= AGED_BRIE and != BACKSTAGE_PASSES` double negatives: removed in step 6.
+# STEP 6 |  commit: refactor: one function per item type, if/elif instead of negated conditions
+# WHAT : One function per item type, chosen by a positive if/elif/else.
+# WHY  : Each rule is readable on its own and the double negatives disappear.
+# NOTE : Adding a new item type still means editing the if/elif chain: fixed in step 8.
 # TEST : python -m unittest -v   (run inside this folder)
 # ==========================================================================
 
@@ -24,37 +24,48 @@ def decrease_quality(item, amount=1):
         item.quality = max(MIN_QUALITY, item.quality - amount)
 
 
-# NEW: loop body extracted so one item = one function.
+# NEW: each item type gets its own function holding only ITS rules.
+def update_normal_item(item):
+    decrease_quality(item)
+    item.sell_in = item.sell_in - 1
+    if item.sell_in < 0:
+        decrease_quality(item)
+
+
+# Aged Brie: quality goes UP (twice as fast once expired).
+def update_aged_brie(item):
+    increase_quality(item)
+    item.sell_in = item.sell_in - 1
+    if item.sell_in < 0:
+        increase_quality(item)
+
+
+# Backstage passes: +1, +2 (11 days or fewer), +3 (6 days or fewer), 0 after the concert.
+def update_backstage_passes(item):
+    increase_quality(item)
+    if item.sell_in < 11:
+        increase_quality(item)
+    if item.sell_in < 6:
+        increase_quality(item)
+    item.sell_in = item.sell_in - 1
+    if item.sell_in < 0:
+        item.quality = MIN_QUALITY
+
+
+# CHANGED: positive if/elif/else dispatch replaces `!= A and != B` double negatives.
+# Weakness: adding a new item type still means editing this chain (fixed in step 8).
 def update_item(item):
-    # Guard clause: Sulfuras never changes, so every "!= SULFURAS" check disappears.
-    # NEW guard clause: Sulfuras never changes, so return early.
-    # This deletes every `!= SULFURAS` check that used to be scattered below.
+    # Positive if/elif chain instead of negated "!= A and != B" conditions.
     if item.name == SULFURAS:
         return
-
-    if item.name != AGED_BRIE and item.name != BACKSTAGE_PASSES:
-        decrease_quality(item)
+    elif item.name == AGED_BRIE:
+        update_aged_brie(item)
+    elif item.name == BACKSTAGE_PASSES:
+        update_backstage_passes(item)
     else:
-        increase_quality(item)
-        if item.name == BACKSTAGE_PASSES:
-            if item.sell_in < 11:
-                increase_quality(item)
-            if item.sell_in < 6:
-                increase_quality(item)
-
-    item.sell_in = item.sell_in - 1
-
-    if item.sell_in < 0:
-        if item.name != AGED_BRIE:
-            if item.name != BACKSTAGE_PASSES:
-                decrease_quality(item)
-            else:
-                item.quality = MIN_QUALITY
-        else:
-            increase_quality(item)
+        update_normal_item(item)
 
 
-# update_quality is now a thin loop. Public API GildedRose(items).update_quality() is unchanged.
 class GildedRose(object):
 
     def __init__(self, items):
